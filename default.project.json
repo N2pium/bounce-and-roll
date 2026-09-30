@@ -1,0 +1,24 @@
+{
+  "name": "BounceAndRoll",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "BounceRoll": {
+        "$path": "src/shared/BounceRoll",
+        "Remotes": {
+          "$className": "Folder",
+          "BumpRequest": { "$className": "RemoteEvent" },
+          "BumpApply": { "$className": "RemoteEvent" }
+        }
+      }
+    },
+    "ServerScriptService": {
+      "BallServer": { "$path": "src/server/BallServer.server.luau" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "BounceClient": { "$path": "src/client/BounceClient" }
+      }
+    }
+  }
+}
