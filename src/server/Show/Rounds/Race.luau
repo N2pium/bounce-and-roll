@@ -1,4 +1,5 @@
--- ROLL RACE: the first racers across the finish qualify; everyone else is out.
+-- Races (Roll Race, Tube Town): the first racers across the finish qualify; everyone else is out.
+local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local BotBrain = require(script.Parent.Parent:WaitForChild("BotBrain"))
@@ -18,7 +19,13 @@ function Race.Run(show, map, alive)
 	table.sort(waypoints, function(a, b)
 		return tonumber(a.Name) < tonumber(b.Name)
 	end)
-	local context = { waypoints = waypoints, killY = map:GetAttribute("KillY") }
+	local tubes = {}
+	for _, part in map:GetDescendants() do
+		if CollectionService:HasTag(part, "TubeMouth") then
+			table.insert(tubes, { mouth = part, model = part.Parent })
+		end
+	end
+	local context = { waypoints = waypoints, killY = map:GetAttribute("KillY"), tubes = tubes }
 	for _, p in alive do
 		p:SetBehavior(BotBrain.Behaviors.Race, context)
 	end

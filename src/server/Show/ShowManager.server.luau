@@ -27,7 +27,7 @@ local activeFolder = Instance.new("Folder")
 activeFolder.Name = "ActiveRound"
 activeFolder.Parent = workspace
 
-local RACE = { map = "Race", round = "Race", mood = "Race" }
+local RACE = { map = { "Race", "TubeTown" }, round = "Race", mood = "Race" } -- one race map, picked at random
 local SWEEPER = { map = "Sweeper", round = "Sweeper", mood = "Survival" }
 local FINAL = { map = "HexARoll", round = "Hex", mood = "Final", final = true }
 
@@ -113,7 +113,8 @@ local function shuffle(list)
 end
 
 local function runRound(index, total, entry, alive)
-	local map = roundMaps:WaitForChild(entry.map):Clone()
+	local mapName = typeof(entry.map) == "table" and entry.map[math.random(1, #entry.map)] or entry.map
+	local map = roundMaps:WaitForChild(mapName):Clone()
 	map.Parent = activeFolder
 	for _, part in map:GetDescendants() do
 		if CollectionService:HasTag(part, "Spinner") then

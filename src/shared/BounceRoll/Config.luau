@@ -105,7 +105,7 @@ Config.Show = {
 	PodiumSeconds = 7,
 	RaceQualifyShare = 0.6, -- fraction of racers that qualify
 	SurvivalKeepShare = 0.5, -- fraction that survive a survival round
-	RaceTimeLimit = 90,
+	RaceTimeLimit = 150,
 	HexTimeLimit = 120,
 	SweeperTimeLimit = 75,
 }

@@ -1,6 +1,11 @@
 -- Rolls the local player's ball: momentum-based acceleration, jumps (coyote time, buffering,
--- one air jump), hold-to-float, dash, and bounce pads / pinball bumpers.
+-- one air jump), hold-to-float, dash, bounce pads / pinball bumpers, and tube rides.
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local TubePath = require(ReplicatedStorage:WaitForChild("BounceRoll"):WaitForChild("TubePath"))
+
+local TUBE_REENTRY_COOLDOWN = 1
 
 local BallController = {}
 BallController.__index = BallController
@@ -31,8 +36,37 @@ function BallController.new(ball, root, config)
 	self.jumpFresh = false
 	self.lastDashAt = -math.huge
 	self.touchCooldowns = setmetatable({}, { __mode = "k" })
+	self.ride = nil -- active tube ride
+	self.tubeCooldownUntil = 0
 	self.onEvent = function() end
 	return self
+end
+
+function BallController:InTube()
+	return self.ride ~= nil
+end
+
+function BallController:EnterTube(tube)
+	if self.ride or os.clock() < self.tubeCooldownUntil then
+		return
+	end
+	self.ride = TubePath.NewRide(tube)
+	self.onEvent("tubeEnter", tube)
+end
+
+-- Carries the ball along the tube; input, gravity and bumps don't apply while riding.
+function BallController:StepTube(dt)
+	local ride = self.ride
+	local position, direction, finished = TubePath.Advance(ride, dt)
+	self.ball.CFrame = CFrame.new(position)
+	if finished then
+		self.ball.AssemblyLinearVelocity = direction * ride.exitSpeed
+		self.ride = nil
+		self.tubeCooldownUntil = os.clock() + TUBE_REENTRY_COOLDOWN
+		self.onEvent("tubeExit")
+	else
+		self.ball.AssemblyLinearVelocity = direction * ride.speed
+	end
 end
 
 function BallController:_probeGround()
@@ -158,6 +192,10 @@ function BallController:ApplyVelocityChange(change)
 end
 
 function BallController:HandleTouch(part)
+	if CollectionService:HasTag(part, "TubeMouth") then
+		self:EnterTube(part.Parent)
+		return
+	end
 	local isPad = CollectionService:HasTag(part, "BouncePad")
 	local isBumper = not isPad and CollectionService:HasTag(part, "Bumper")
 	if not isPad and not isBumper then
@@ -214,6 +252,7 @@ function BallController:Teleport(position)
 	self.grounded = false
 	self.minAirVelocityY = 0
 	self.jumpRequestedAt = nil
+	self.ride = nil
 end
 
 return BallController

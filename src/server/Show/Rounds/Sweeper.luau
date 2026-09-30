@@ -20,6 +20,7 @@ function Sweeper.Run(show, map, alive, entry)
 	local secondArm = false
 	local context = {
 		center = center,
+		radius = platform.Size.Y / 2,
 		spin = function()
 			return bar.AssemblyAngularVelocity.Y
 		end,

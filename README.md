@@ -1,12 +1,13 @@
 # Bounce & Roll
 
-Roblox physics party game: you're a hamster ball. Tilt your phone (or use a stick/keyboard) to roll, bump your friends off the map, and survive a show of elimination rounds. See [GAME_DESIGN.md](GAME_DESIGN.md) and [VIRAL_ROBLOX_RESEARCH.md](VIRAL_ROBLOX_RESEARCH.md).
+Roblox physics party game: you're a hamster ball. Tilt your phone (or use a stick/keyboard) to roll, bump your friends off the map, and survive a show of elimination rounds. See [ROADMAP.md](ROADMAP.md) for status, [GAME_DESIGN.md](GAME_DESIGN.md) for the design, and [VIRAL_ROBLOX_RESEARCH.md](VIRAL_ROBLOX_RESEARCH.md) for the research behind it.
 
 ## Layout
 
 | File | Lives in Studio at | What it does |
 |---|---|---|
 | `src/shared/BounceRoll/Config.luau` | `ReplicatedStorage.BounceRoll.Config` | Feel + show tuning: gravity, bounce, speed, jump, dash, bumps, camera, tilt, round timings |
+| `src/shared/BounceRoll/TubePath.luau` | `ReplicatedStorage.BounceRoll.TubePath` | Glass tube rides (shared by the client controller and server bots) |
 | `src/shared/BounceRoll/Moods.luau` | `ReplicatedStorage.BounceRoll.Moods` | The 8 lighting moods (sky + light + haze + grade + tints) and which rounds use which |
 | `src/server/BallServer.server.luau` | `ServerScriptService.BallServer` | Puts avatars in hamster balls, relays bumps, squad counts, lobby bump bots |
 | `src/server/BallFactory.luau` | `ServerScriptService.BallFactory` | Shared ball + name-tag builder for players and bots |
@@ -15,12 +16,12 @@ Roblox physics party game: you're a hamster ball. Tilt your phone (or use a stic
 | `src/server/Show/ShowManager.server.luau` | `ServerScriptService.Show.ShowManager` | The show loop: intermission → rounds → podium |
 | `src/server/Show/Participants.luau` | `…Show.Participants` | One interface over players and bots |
 | `src/server/Show/BotBrain.luau` | `…Show.BotBrain` | Bot balls and their Race / Hex / Sweeper behaviors |
-| `src/server/Show/Rounds/*.luau` | `…Show.Rounds.*` | Race, Hex-a-Roll, Sweeper (+ shared Survival rules) |
+| `src/server/Show/Rounds/*.luau` | `…Show.Rounds.*` | Race (Roll Race / Tube Town), Hex-a-Roll, Sweeper (+ shared Survival rules) |
 | `src/client/BounceClient/init.client.luau` | `StarterPlayerScripts.BounceClient` | Client entry: input, controller, bumps, camera, show teleports/freezes |
 | `src/client/BounceClient/*.luau` | child modules | BallController, ChaseCamera, Bumps, TiltInput, MoveInput, Effects, Hud, Mood, Ambience, ShowClient |
 | `tools/build_map.luau` | — | Builds Bounce Park (the lobby), remotes, lighting and StarterPlayer settings |
 | `tools/dress_map.luau` | — | Dreamcore dressing: checker floors, cloud ocean, rainbows, doorways, orbs, default mood |
-| `tools/build_rounds.luau` | — | Builds the round maps into `ServerStorage.RoundMaps` |
+| `tools/build_rounds.luau` | — | Builds the round maps into `ServerStorage.RoundMaps`; races are lists of sections (Start, Slope, Slalom, Hops, Tube, Spinner, PadUp, Bridge, Finish) |
 
 Assets that only live in the place file: `ReplicatedStorage.BounceRoll.Skies` (the 8 skyboxes, named after their moods) and `ReplicatedStorage.BounceRoll.Assets` (the cloud mesh used by the tools).
 
@@ -32,7 +33,7 @@ Assets that only live in the place file: `ReplicatedStorage.BounceRoll.Skies` (t
 
 ## The show
 
-`Intermission (20s) → Roll Race → Sweeper → Hex-a-Roll final → Podium`. Bots fill every show up to 8 participants. Fewer than 5 participants shortens the playlist. The show stops early once no human players are left. Eliminated players are sent to the lobby and can spectate (Z / X or the arrows) or leave to play the lobby.
+`Intermission (20s) → race (Roll Race or Tube Town) → Sweeper → Hex-a-Roll final → Podium`. Bots fill every show up to 8 participants. Fewer than 5 participants shortens the playlist. The show stops early once no human players are left. Eliminated players are sent to the lobby and can spectate (Z / X or the arrows) or leave to play the lobby.
 
 ## Level-design tags
 
@@ -45,6 +46,7 @@ Assets that only live in the place file: `ReplicatedStorage.BounceRoll.Skies` (t
 | `KillPart` | Touching it respawns you |
 | `Finish` | Stops the lobby course timer |
 | `Spinner` | Kept server-simulated |
+| `TubeMouth` | Entrance trigger of a tube Model (`Speed`, `ExitSpeed` attributes; `Path` part with numbered Attachments) |
 | `HexTile` | Hex-a-Roll tile part (a tile Model is three of them) |
 | `MoodCloud` / `MoodSea` | Tinted by the current mood; clouds also bob (`FloatAmount`) |
 | `DreamFloat` | Bobs gently (`FloatAmount`) |

@@ -2,12 +2,14 @@
 --   Race     follow the map's waypoints, jump at Jump waypoints, respawn at Checkpoint ones
 --   Hex      keep hopping onto live tiles
 --   Sweeper  hold a spot and jump when a bar arm is about to arrive
--- Bots have a random skill so good players beat them.
+-- Bots ride any tube whose mouth they roll into (context.tubes). Bots have a random skill so
+-- good players beat them.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("BounceRoll"):WaitForChild("Config"))
+local TubePath = require(ReplicatedStorage:WaitForChild("BounceRoll"):WaitForChild("TubePath"))
 local BallFactory = require(script.Parent.Parent:WaitForChild("BallFactory"))
 
 local NAMES = { "Mochi", "Boba", "Pudding", "Sprinkle", "Marsh", "Nimbus", "Pebble", "Bubbles", "Taffy", "Dewdrop", "Gumdrop", "Sorbet", "Puff", "Biscuit", "Jellybean", "Wisp", "Cocoa", "Peaches", "Minty", "Button" }
@@ -19,6 +21,8 @@ local COLORS = {
 	Color3.fromRGB(200, 225, 255),
 }
 local TAU = math.pi * 2
+local TUBE_MOUTH_REACH = 8
+local TUBE_REENTRY_COOLDOWN = 1
 
 local BotBrain = {}
 
@@ -74,6 +78,32 @@ function Bot:SetBehavior(behavior, context)
 	self.behavior = behavior
 	self.context = context
 	self.state = {}
+	self.ride = nil
+end
+
+-- Returns true while riding a tube (the behavior is skipped for that frame).
+function Bot:_stepTubes(now)
+	local ball = self.ball
+	if self.ride then
+		local position, direction, finished = TubePath.Advance(self.ride, self.dt)
+		ball.CFrame = CFrame.new(position)
+		ball.AssemblyLinearVelocity = direction * (finished and self.ride.exitSpeed or self.ride.speed)
+		if finished then
+			self.ride = nil
+			self.tubeCooldownUntil = now + TUBE_REENTRY_COOLDOWN
+		end
+		return true
+	end
+	local tubes = self.context and self.context.tubes
+	if tubes and now > (self.tubeCooldownUntil or 0) then
+		for _, tube in tubes do
+			if (tube.mouth.Position - ball.Position).Magnitude < TUBE_MOUTH_REACH then
+				self.ride = TubePath.NewRide(tube.model)
+				return true
+			end
+		end
+	end
+	return false
 end
 
 function Bot:Destroy()
@@ -149,7 +179,9 @@ function BotBrain.Behaviors.Race(bot, context)
 	state.respawn = state.respawn or ball.Position
 
 	if ball.Position.Y < context.killY then
+		-- Back to the last checkpoint, and rewind the route to it so skipped jumps are retried.
 		bot:Teleport(state.respawn + Vector3.new(0, 3, 0))
+		state.index = state.respawnIndex or 1
 		return
 	end
 	local target = waypoints[state.index]
@@ -162,6 +194,7 @@ function BotBrain.Behaviors.Race(bot, context)
 	local isJump = target:GetAttribute("Jump")
 	if target:GetAttribute("Checkpoint") and flatDistance < 12 then
 		state.respawn = target.Position
+		state.respawnIndex = state.index
 	end
 	local nextPoint = waypoints[state.index + 1]
 	-- Advance on arrival, or when we've already overshot toward the next waypoint.
@@ -190,7 +223,7 @@ function BotBrain.Behaviors.Hex(bot, context)
 			local dy = position.Y - center.Y
 			if dy > 0 and dy < 12 then -- tiles on the layer we're standing on
 				local flat = Vector3.new(center.X - position.X, 0, center.Z - position.Z).Magnitude
-				local score = math.abs(flat - 14) + rng:NextNumber(0, 10) + (center - context.center).Magnitude * 0.15
+				local score = math.abs(flat - 18) + rng:NextNumber(0, 10) + (center - context.center).Magnitude * 0.12
 				if score < bestScore then
 					best, bestScore = center, score
 				end
@@ -202,13 +235,13 @@ function BotBrain.Behaviors.Hex(bot, context)
 	bot:MoveToward(state.target, 16 + bot.skill * 10, 60)
 end
 
--- context: { center = Vector3, bars = function(): {Vector3 arm directions}, spin = function(): number rad/s }
+-- context: { center = Vector3, radius = number, bars = function(): {Vector3 arm directions}, spin = function(): number rad/s }
 function BotBrain.Behaviors.Sweeper(bot, context)
 	local state = bot.state
 	local position = bot.ball.Position
 	if not state.spot then
 		local angle = rng:NextNumber(0, TAU)
-		state.spot = context.center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * rng:NextNumber(12, 30)
+		state.spot = context.center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * context.radius * rng:NextNumber(0.2, 0.7)
 	end
 	bot:MoveToward(state.spot, 12, 40)
 
@@ -241,8 +274,10 @@ RunService.Heartbeat:Connect(function(dt)
 	for bot in bots do
 		if bot.behavior and not bot.ball.Anchored and bot.ball.Parent then
 			bot.dt = dt
-			bot:_checkPads(now)
-			bot.behavior(bot, bot.context)
+			if not bot:_stepTubes(now) then
+				bot:_checkPads(now)
+				bot.behavior(bot, bot.context)
+			end
 		end
 	end
 end)

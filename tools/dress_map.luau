@@ -89,9 +89,9 @@ end
 local rng = Random.new(42)
 -- Boxes around the course where mid-height clouds would block the view.
 local keepClear = {
-	{ Vector3.new(-45, 25, -50), Vector3.new(45, 140, 460) },
-	{ Vector3.new(-45, 60, 400), Vector3.new(135, 140, 545) },
-	{ Vector3.new(100, 70, 410), Vector3.new(225, 150, 530) },
+	{ Vector3.new(-60, 25, -60), Vector3.new(60, 140, 460) },
+	{ Vector3.new(-60, 60, 390), Vector3.new(185, 140, 560) },
+	{ Vector3.new(185, 70, 400), Vector3.new(310, 160, 540) },
 }
 local function blocked(position, size)
 	local half = size / 2
@@ -151,9 +151,9 @@ local function rainbow(name, center, across, innerRadius, bandWidth, thickness, 
 		end
 	end
 end
-rainbow("FinishArch", Vector3.new(148, 99, 470), Vector3.zAxis, 20, 1.8, 1.2, 24)
+rainbow("FinishArch", Vector3.new(238, 99, 470), Vector3.zAxis, 32, 2.4, 1.4, 28)
 rainbow("HorizonAhead", Vector3.new(0, -20, 820), Vector3.xAxis, 170, 6, 3, 30)
-rainbow("HorizonArena", Vector3.new(520, -20, 470), Vector3.zAxis, 160, 6, 3, 30)
+rainbow("HorizonArena", Vector3.new(650, -20, 470), Vector3.zAxis, 160, 6, 3, 30)
 
 -- 4. Floating doorways: doors to nowhere on little cloud islands, light spilling out ------
 local function doorway(base, lookAt, doorColor)
@@ -179,10 +179,10 @@ local function doorway(base, lookAt, doorColor)
 	local knob = block(Vector3.new(0.6, 0.6, 0.6), hinge * CFrame.new(5.3, 0, -0.4), rgb(255, 220, 140), model)
 	knob.Shape = Enum.PartType.Ball
 end
-doorway(Vector3.new(-75, 72, 110), Vector3.new(0, 72, 110), PASTELS[1])
-doorway(Vector3.new(85, 98, 300), Vector3.new(0, 98, 300), PASTELS[2])
-doorway(Vector3.new(-80, 120, 470), Vector3.new(0, 120, 470), PASTELS[3])
-doorway(Vector3.new(235, 122, 400), Vector3.new(160, 122, 470), PASTELS[4])
+doorway(Vector3.new(-85, 72, 110), Vector3.new(0, 72, 110), PASTELS[1])
+doorway(Vector3.new(95, 98, 300), Vector3.new(0, 98, 300), PASTELS[2])
+doorway(Vector3.new(-90, 120, 470), Vector3.new(0, 120, 470), PASTELS[3])
+doorway(Vector3.new(300, 125, 380), Vector3.new(250, 125, 470), PASTELS[4])
 
 -- 5. Dream orbs: soft glowing spheres floating beside the course ---------------------------
 local function courseHeight(z)
@@ -198,7 +198,7 @@ end
 for i = 1, 14 do
 	local z = rng:NextNumber(0, 450)
 	local side = i % 2 == 0 and 1 or -1
-	local orb = block(Vector3.one * rng:NextNumber(2, 4.5), CFrame.new(side * rng:NextNumber(26, 42), courseHeight(z) + rng:NextNumber(8, 24), z), PASTELS[i % #PASTELS + 1], orbFolder, Enum.Material.Neon)
+	local orb = block(Vector3.one * rng:NextNumber(2, 4.5), CFrame.new(side * rng:NextNumber(45, 62), courseHeight(z) + rng:NextNumber(8, 24), z), PASTELS[i % #PASTELS + 1], orbFolder, Enum.Material.Neon)
 	orb.Shape = Enum.PartType.Ball
 	orb.CastShadow = false
 	orb:SetAttribute("FloatAmount", 3)
@@ -206,7 +206,7 @@ for i = 1, 14 do
 end
 for i = 1, 8 do
 	local angle = i / 8 * math.pi * 2
-	local orb = block(Vector3.one * rng:NextNumber(2.5, 4.5), CFrame.new(65 + math.cos(angle) * 62, 100 + rng:NextNumber(0, 14), 470 + math.sin(angle) * 62), PASTELS[i % #PASTELS + 1], orbFolder, Enum.Material.Neon)
+	local orb = block(Vector3.one * rng:NextNumber(2.5, 4.5), CFrame.new(105 + math.cos(angle) * 90, 100 + rng:NextNumber(0, 14), 470 + math.sin(angle) * 90), PASTELS[i % #PASTELS + 1], orbFolder, Enum.Material.Neon)
 	orb.Shape = Enum.PartType.Ball
 	orb.CastShadow = false
 	orb:SetAttribute("FloatAmount", 3)

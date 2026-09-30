@@ -131,6 +131,8 @@ Never sell knockback, speed or mass. The game's "fair chaos" is what keeps peopl
 
 ## 9. Build plan
 
+> **Status:** weeks 1 and 2 are done, plus a dreamcore art pass and a scale/tubes pass. Live progress and next steps are tracked in [ROADMAP.md](ROADMAP.md). The original plan is kept below for reference.
+
 **Week 1: Feel (don't skip this)**
 - Ball controller: physics, jump, dash.
 - Chase camera.

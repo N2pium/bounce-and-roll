@@ -247,6 +247,12 @@ local function onCharacterAdded(character)
 			effects:Flash(data)
 			effects:Burst("spark", ball.Position, 12)
 			effects:PopText("BONK!", ball.Position, PINK)
+		elseif name == "tubeEnter" then
+			effects:Play("boing", 1.7)
+			effects:PopText("WHEE!", ball.Position, MINT)
+		elseif name == "tubeExit" then
+			effects:Play("jump", 0.8)
+			effects:Burst("puff", ball.Position, 10)
 		end
 	end
 
@@ -422,6 +428,10 @@ RunService.PreSimulation:Connect(function(dt)
 			s.ball.AssemblyAngularVelocity = Vector3.zero
 			s.ball.CFrame = frozenCFrame
 		end
+		return
+	end
+	if s.controller:InTube() then
+		s.controller:StepTube(dt)
 		return
 	end
 	local move = readMoveDirection(dt)
