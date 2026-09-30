@@ -11,6 +11,7 @@ local LAVENDER = Color3.fromRGB(160, 130, 255)
 local SKY = Color3.fromRGB(100, 170, 255)
 local GREY = Color3.fromRGB(130, 128, 145)
 local GOLD = Color3.fromRGB(255, 225, 110)
+local CAPTION_FONT = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Regular, Enum.FontStyle.Italic)
 
 local function make(className, props, children)
 	local instance = Instance.new(className)
@@ -79,6 +80,19 @@ function Hud.new(player, options)
 	self.toastStroke = self.toast:FindFirstChildOfClass("UIStroke")
 	self.toastStroke.Transparency = 1
 	self.squad = label({ Position = UDim2.new(0, 16, 0, 8), Size = UDim2.fromOffset(260, 30), TextSize = 24, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = GOLD, Visible = false, Parent = gui })
+	self.caption = make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 74),
+		Size = UDim2.fromOffset(420, 34),
+		BackgroundTransparency = 1,
+		FontFace = CAPTION_FONT,
+		TextSize = 26,
+		TextColor3 = WHITE,
+		TextTransparency = 1,
+		Text = "",
+		Parent = gui,
+	}, { make("UIStroke", { Thickness = 1.5, Color = INK, Transparency = 1 }) })
+	self.captionId = 0
 
 	if options.touch then
 		self.jumpButton = button("JUMP", UDim2.fromOffset(120, 120), UDim2.new(1, -90, 1, -90), PINK, gui)
@@ -157,6 +171,12 @@ function Hud:SetBest(text)
 	self.best.Text = text
 end
 
+-- The lobby course timer hides while a show is running.
+function Hud:SetCourseVisible(visible)
+	self.timer.Visible = visible
+	self.best.Visible = visible
+end
+
 function Hud:SetSquad(count)
 	self.squad.Visible = count > 0
 	self.squad.Text = string.format("SQUAD x%d  (sturdier!)", count)
@@ -196,6 +216,26 @@ function Hud:Toast(text, color)
 		end
 		TweenService:Create(toast, TweenInfo.new(0.35), { TextTransparency = 1 }):Play()
 		TweenService:Create(stroke, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+	end)
+end
+
+-- Soft "~ mood name ~" caption that drifts in and out when the lighting mood changes.
+function Hud:Caption(text)
+	self.captionId += 1
+	local id = self.captionId
+	local caption = self.caption
+	local stroke = caption:FindFirstChildOfClass("UIStroke")
+	caption.Text = "~  " .. text .. "  ~"
+	local fadeIn = TweenInfo.new(1.5, Enum.EasingStyle.Sine)
+	TweenService:Create(caption, fadeIn, { TextTransparency = 0.1 }):Play()
+	TweenService:Create(stroke, fadeIn, { Transparency = 0.5 }):Play()
+	task.delay(4.5, function()
+		if self.captionId ~= id then
+			return
+		end
+		local fadeOut = TweenInfo.new(2, Enum.EasingStyle.Sine)
+		TweenService:Create(caption, fadeOut, { TextTransparency = 1 }):Play()
+		TweenService:Create(stroke, fadeOut, { Transparency = 1 }):Play()
 	end)
 end
 

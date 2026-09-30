@@ -94,6 +94,22 @@ Config.Camera = {
 	CollisionRadius = 1,
 }
 
+-- The show: a lobby intermission, then rounds that eliminate players until one is crowned.
+Config.Show = {
+	MinParticipants = 8, -- bots fill the show up to this many
+	MaxParticipants = 20,
+	IntermissionSeconds = 20,
+	IntroSeconds = 4,
+	CountdownSeconds = 3,
+	ResultsSeconds = 4,
+	PodiumSeconds = 7,
+	RaceQualifyShare = 0.6, -- fraction of racers that qualify
+	SurvivalKeepShare = 0.5, -- fraction that survive a survival round
+	RaceTimeLimit = 90,
+	HexTimeLimit = 120,
+	SweeperTimeLimit = 75,
+}
+
 Config.Tilt = {
 	Sensitivity = 2.4,
 	Deadzone = 0.05,

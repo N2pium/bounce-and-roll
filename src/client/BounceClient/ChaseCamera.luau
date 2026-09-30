@@ -8,6 +8,7 @@
 --     (bumps, rebounds), so a knockback never whips the view around.
 --   * Manual turning (Q/E, right-drag, swipe, right stick) wins for a few seconds, then eases back.
 --   * Vertical follow is lazy so floaty bounces don't shake the view; it catches up on big drops/launches.
+--   * Zones can also set Pitch / Distance (arena rounds use a higher, more top-down view).
 local ChaseCamera = {}
 ChaseCamera.__index = ChaseCamera
 
@@ -30,6 +31,8 @@ function ChaseCamera.new(config)
 	self.zoneYaw = nil
 	self.focus = nil
 	self.distance = config.Distance
+	self.baseDistance = config.Distance
+	self.pitch = config.Pitch
 	self.fov = config.BaseFov
 
 	self.params = RaycastParams.new()
@@ -48,15 +51,21 @@ function ChaseCamera:AddManualYaw(delta)
 	self.lastManualAt = os.clock()
 end
 
-function ChaseCamera:Snap(position, yaw)
+function ChaseCamera:Snap(position, yaw, zone)
 	self.yaw = yaw
 	self.manualOffset = 0
 	self.focus = position
-	self.distance = self.config.Distance
+	self.pitch = zone and zone.Pitch or self.config.Pitch
+	self.baseDistance = zone and zone.Distance or self.config.Distance
+	self.distance = self.baseDistance
 end
 
-function ChaseCamera:Update(dt, position, velocity, zoneYaw)
+-- `zone` is nil or { Yaw = radians, Pitch = degrees?, Distance = studs? }.
+function ChaseCamera:Update(dt, position, velocity, zone)
 	local cfg = self.config
+	local zoneYaw = zone and zone.Yaw
+	self.pitch += ((zone and zone.Pitch or cfg.Pitch) - self.pitch) * alpha(3, dt)
+	self.baseDistance += ((zone and zone.Distance or cfg.Distance) - self.baseDistance) * alpha(3, dt)
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Scriptable
 
@@ -104,10 +113,10 @@ function ChaseCamera:Update(dt, position, velocity, zoneYaw)
 
 	-- 3. Place the camera behind and above; pull in instantly when the level blocks it, ease back out
 	local pivot = focus + Vector3.new(0, cfg.PivotHeight, 0)
-	local rotation = CFrame.Angles(0, self.yaw, 0) * CFrame.Angles(-math.rad(cfg.Pitch), 0, 0)
+	local rotation = CFrame.Angles(0, self.yaw, 0) * CFrame.Angles(-math.rad(self.pitch), 0, 0)
 	local back = rotation.LookVector * -1
-	local hit = workspace:Spherecast(pivot, cfg.CollisionRadius, back * cfg.Distance, self.params)
-	local allowed = hit and math.max(hit.Distance - 0.5, cfg.MinDistance) or cfg.Distance
+	local hit = workspace:Spherecast(pivot, cfg.CollisionRadius, back * self.baseDistance, self.params)
+	local allowed = hit and math.max(hit.Distance - 0.5, cfg.MinDistance) or self.baseDistance
 	if allowed < self.distance then
 		self.distance = allowed
 	else

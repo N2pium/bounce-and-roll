@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("BounceRoll")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = Shared:WaitForChild("Remotes")
+local BallFactory = require(script.Parent:WaitForChild("BallFactory"))
 
 workspace.Gravity = Config.World.Gravity
 Players.RespawnTime = Config.World.RespawnTime
@@ -27,32 +28,8 @@ for _, group in PhysicsService:GetRegisteredCollisionGroups() do
 	PhysicsService:CollisionGroupSetCollidable("Avatars", group.name, false)
 end
 
-local BALL_COLORS = {
-	Color3.fromRGB(255, 140, 190),
-	Color3.fromRGB(120, 190, 255),
-	Color3.fromRGB(120, 230, 190),
-	Color3.fromRGB(255, 225, 110),
-	Color3.fromRGB(186, 160, 255),
-	Color3.fromRGB(255, 170, 120),
-}
-
-local function makeBall(color, cframe)
-	local cfg = Config.Ball
-	local ball = Instance.new("Part")
-	ball.Name = "Ball"
-	ball.Shape = Enum.PartType.Ball
-	ball.Size = Vector3.one * cfg.Radius * 2
-	ball.Material = Enum.Material.Glass
-	ball.Transparency = cfg.Transparency
-	ball.Color = color
-	ball.TopSurface = Enum.SurfaceType.Smooth
-	ball.BottomSurface = Enum.SurfaceType.Smooth
-	ball.CustomPhysicalProperties = PhysicalProperties.new(cfg.Density, cfg.Friction, cfg.Elasticity, cfg.FrictionWeight, cfg.ElasticityWeight)
-	ball.CollisionGroup = "Balls"
-	ball.CFrame = cframe
-	CollectionService:AddTag(ball, "RollBall")
-	return ball
-end
+local BALL_COLORS = BallFactory.PlayerColors
+local makeBall = BallFactory.Make
 
 -- The avatar rides along inside the ball: no collisions, (almost) no mass.
 local function prepareAvatarPart(part)
@@ -287,19 +264,7 @@ local function startBots()
 	for i = 1, BOT_COUNT do
 		local ball = makeBall(Color3.fromRGB(215, 215, 225), CFrame.new(randomPoint(0.3, 12)))
 		ball.Name = "BumpBot" .. i
-		local tag = Instance.new("BillboardGui")
-		tag.Size = UDim2.fromScale(8, 2)
-		tag.StudsOffset = Vector3.new(0, 6, 0)
-		tag.MaxDistance = 150
-		tag.Parent = ball
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.FredokaOne
-		label.TextScaled = true
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.Text = "BOT"
-		label.Parent = tag
+		BallFactory.NameTag(ball, "BOT")
 		ball.Parent = botFolder
 		pcall(ball.SetNetworkOwner, ball, nil)
 		bots[i] = { ball = ball, target = randomPoint(0.35, 0), retargetAt = 0 }

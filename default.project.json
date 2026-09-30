@@ -5,15 +5,17 @@
     "ReplicatedStorage": {
       "BounceRoll": {
         "$path": "src/shared/BounceRoll",
+        "$ignoreUnknownInstances": true,
         "Remotes": {
           "$className": "Folder",
           "BumpRequest": { "$className": "RemoteEvent" },
-          "BumpApply": { "$className": "RemoteEvent" }
+          "BumpApply": { "$className": "RemoteEvent" },
+          "ShowEvent": { "$className": "RemoteEvent" }
         }
       }
     },
     "ServerScriptService": {
-      "BallServer": { "$path": "src/server/BallServer.server.luau" }
+      "$path": "src/server"
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {

@@ -26,6 +26,7 @@ StarterPlayer.CameraMode = Enum.CameraMode.Classic
 StarterPlayer.DevTouchMovementMode = Enum.DevTouchMovementMode.Scriptable
 StarterPlayer.DevComputerMovementMode = Enum.DevComputerMovementMode.Scriptable
 workspace.FallenPartsDestroyHeight = -500 -- only settable in Edit mode
+workspace.StreamingEnabled = false -- the show teleports players between far-apart maps
 
 -- Lighting: bright pastel afternoon
 Lighting.ClockTime = 14.5
@@ -316,23 +317,5 @@ zone("Zone_Straight", Vector3.new(-32, 20, -40), Vector3.new(32, 220, 452), 180,
 zone("Zone_Turn", Vector3.new(-32, 20, 452), Vector3.new(20, 220, 500), -90, 2)
 zone("Zone_Arena", Vector3.new(20, 20, 410), Vector3.new(220, 220, 540), -90, 2)
 
--- Decor: floating cloud puffs, kept below the course
-local rng = Random.new(7)
-for _ = 1, 22 do
-	local d = rng:NextNumber(14, 34)
-	part({
-		Name = "Cloud",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.one * d,
-		Color = C.white,
-		Transparency = 0.1,
-		CFrame = CFrame.new(rng:NextNumber(-160, 280), rng:NextNumber(8, 30), rng:NextNumber(-80, 600)),
-		CanCollide = false,
-		CanQuery = false,
-		CanTouch = false,
-		CastShadow = false,
-		Parent = decor,
-	})
-end
-
-print("Bounce Park built")
+-- Clouds, rainbows, doorways, checker floors and the default mood come from dress_map.luau.
+print("Bounce Park built — now run dress_map.luau")

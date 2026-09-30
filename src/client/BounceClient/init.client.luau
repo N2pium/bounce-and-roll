@@ -18,6 +18,10 @@ local Bumps = require(script:WaitForChild("Bumps"))
 local Effects = require(script:WaitForChild("Effects"))
 local Hud = require(script:WaitForChild("Hud"))
 local MoveInput = require(script:WaitForChild("MoveInput"))
+local Mood = require(script:WaitForChild("Mood"))
+local Ambience = require(script:WaitForChild("Ambience"))
+local ShowClient = require(script:WaitForChild("ShowClient"))
+local Moods = require(Shared:WaitForChild("Moods"))
 
 local player = Players.LocalPlayer
 
@@ -27,6 +31,18 @@ local chaseCamera = ChaseCamera.new(Config.Camera)
 local effects = Effects.new()
 local hud = Hud.new(player, { touch = isTouch, tiltSupported = tilt.supported })
 local moveInput = MoveInput.new(isTouch and hud.gui or nil)
+
+local mood
+local ambience = Ambience.new(function(part)
+	if mood then
+		mood:TintNew(part)
+	end
+end)
+mood = Mood.new(Shared, Moods, function(_, def)
+	hud:Caption(def.Caption)
+	ambience:SetMoteColor(def.Motes)
+end)
+local showClient = ShowClient.new(Shared, hud)
 
 local GOLD = Color3.fromRGB(255, 225, 110)
 local MINT = Color3.fromRGB(120, 230, 190)
@@ -40,7 +56,10 @@ local mouseDragging = false
 local cameraTouch = nil
 
 local session = nil -- state for the current character
-local runStartedAt, runFinishedAt, bestTime = nil, nil, nil
+local runStartedAt, runFinishedAt, bestTime = nil, nil, nil -- the lobby course run
+local frozen = false -- held still by the show (intro / countdown / between rounds)
+local frozenCFrame = nil
+local pendingTeleport = nil -- a show teleport that arrived before our ball existed
 
 local function flat(v)
 	return Vector3.new(v.X, 0, v.Z)
@@ -50,8 +69,9 @@ local function formatTime(seconds)
 	return string.format("%d:%05.2f", seconds // 60, seconds % 60)
 end
 
--- Camera zones are invisible boxes that tell the camera which way the course runs.
-local function zoneYawAt(position)
+-- Camera zones are invisible boxes that tell the camera which way the course runs (Yaw), and
+-- optionally how high / far to sit (Pitch, Distance). Returns nil outside every zone.
+local function zoneAt(position)
 	local best, bestPriority, bestVolume
 	for _, zone in CollectionService:GetTagged("CameraZone") do
 		local p = zone.CFrame:PointToObjectSpace(position)
@@ -64,7 +84,10 @@ local function zoneYawAt(position)
 			end
 		end
 	end
-	return best and math.rad(best:GetAttribute("Yaw") or 0) or nil
+	if not best then
+		return nil
+	end
+	return { Yaw = math.rad(best:GetAttribute("Yaw") or 0), Pitch = best:GetAttribute("Pitch"), Distance = best:GetAttribute("Distance") }
 end
 
 local function cameraForward()
@@ -99,11 +122,16 @@ local function setTiltMode(enabled)
 	hud:SetTiltMode(useTilt)
 end
 
+local function respawnAllowed()
+	-- In survival rounds a fall is final: the server eliminates you instead.
+	return not showClient:IsCompeting() or Shared:GetAttribute("RespawnEnabled") ~= false
+end
+
 local function respawn()
-	if not session then
+	if not session or frozen or not respawnAllowed() then
 		return
 	end
-	if runFinishedAt then
+	if runFinishedAt and not showClient:IsCompeting() then
 		-- After a finish, respawning restarts the whole run.
 		runStartedAt, runFinishedAt = nil, nil
 		session.checkpoint.order = 0
@@ -111,12 +139,40 @@ local function respawn()
 	end
 	local position = session.checkpoint.position + Vector3.new(0, Config.Ball.Radius + 2, 0)
 	session.controller:Teleport(position)
-	chaseCamera:Snap(position, zoneYawAt(position) or chaseCamera:GetYaw())
+	local zone = zoneAt(position)
+	chaseCamera:Snap(position, zone and zone.Yaw or chaseCamera:GetYaw(), zone)
 	effects:Burst("puff", position, 12)
 end
 
+-- Frozen balls are pinned in place every frame rather than anchored: anchoring our own ball
+-- would stop its position replicating, and the server would keep seeing it where it used to be.
+local function setFrozen(value)
+	frozen = value
+	frozenCFrame = value and session and session.ball.CFrame or nil
+	if session then
+		session.ball.AssemblyLinearVelocity = Vector3.zero
+		session.ball.AssemblyAngularVelocity = Vector3.zero
+	end
+end
+
+-- The show moves us between the lobby and round maps. The new spot becomes our checkpoint.
+local function showTeleport(position, yaw, freeze)
+	if not session then
+		pendingTeleport = { position, yaw, freeze }
+		return
+	end
+	session.checkpoint.order = 0
+	session.checkpoint.position = position
+	runStartedAt, runFinishedAt = nil, nil -- the lobby course run restarts after a show
+	hud:SetTimer("0:00.00")
+	session.controller:Teleport(position)
+	local zone = zoneAt(position)
+	chaseCamera:Snap(position, zone and zone.Yaw or yaw or math.pi, zone)
+	setFrozen(freeze == true)
+end
+
 local function finish(part)
-	if not runStartedAt or runFinishedAt then
+	if not runStartedAt or runFinishedAt or showClient:IsCompeting() then
 		return
 	end
 	runFinishedAt = os.clock()
@@ -221,8 +277,29 @@ local function onCharacterAdded(character)
 		end
 	end))
 
-	chaseCamera:Snap(ball.Position, zoneYawAt(ball.Position) or math.pi)
+	local zone = zoneAt(ball.Position)
+	chaseCamera:Snap(ball.Position, zone and zone.Yaw or math.pi, zone)
+	if pendingTeleport then
+		local teleport = pendingTeleport
+		pendingTeleport = nil
+		showTeleport(table.unpack(teleport))
+	elseif frozen then
+		setFrozen(true)
+	end
 end
+
+Remotes.ShowEvent.OnClientEvent:Connect(function(kind, ...)
+	if kind == "teleport" then
+		showTeleport(...)
+	elseif kind == "freeze" then
+		setFrozen(...)
+	elseif kind == "feed" then
+		showClient:Feed(...)
+	elseif kind == "confetti" then
+		effects:Burst("confetti", ..., 150)
+		effects:Play("chime", 1)
+	end
+end)
 
 -- Input ------------------------------------------------------------------------
 local function requestJump()
@@ -339,16 +416,27 @@ RunService.PreSimulation:Connect(function(dt)
 	if not s or not s.ball.Parent then
 		return
 	end
+	if frozen then
+		if frozenCFrame then
+			s.ball.AssemblyLinearVelocity = Vector3.zero
+			s.ball.AssemblyAngularVelocity = Vector3.zero
+			s.ball.CFrame = frozenCFrame
+		end
+		return
+	end
 	local move = readMoveDirection(dt)
+	if showClient:GetSpectateTarget() then
+		move = Vector3.zero -- watching someone else; our own ball waits
+	end
 	s.lastMove = move
-	if not runStartedAt and move.Magnitude > 0.1 then
+	if not runStartedAt and move.Magnitude > 0.1 and not showClient:IsCompeting() then
 		runStartedAt = os.clock()
 	end
 
 	s.controller:Step(dt, move, jumpHeld)
 	s.bumps:Step(dt)
 
-	if s.ball.Position.Y < Config.World.KillY then
+	if s.ball.Position.Y < (Shared:GetAttribute("KillY") or Config.World.KillY) then
 		respawn()
 	end
 
@@ -367,7 +455,8 @@ RunService:BindToRenderStep("BounceRollCamera", Enum.RenderPriority.Camera.Value
 
 	local s = session
 	if s and s.ball.Parent then
-		chaseCamera:Update(dt, s.ball.Position, s.ball.AssemblyLinearVelocity, zoneYawAt(s.ball.Position))
+		local subject = showClient:GetSpectateTarget() or s.ball
+		chaseCamera:Update(dt, subject.Position, subject.AssemblyLinearVelocity, zoneAt(subject.Position))
 		hud:SetDashReady(s.controller:DashReadiness())
 	end
 
